@@ -1,41 +1,49 @@
 # gpu-persistent-homology
 
-CUDA-accelerated persistent homology computation for the RTX 4050 (compute capability 8.9).
+**CUDA persistent homology — H⁰ and H¹ persistence diagrams, union-find on GPU, Wasserstein distance computation.**
 
-## Features
+Computes persistent homology of Vietoris-Rips complexes on the GPU. H⁰ (connected components) via parallel union-find, H¹ (loops) via boundary matrix reduction, and Wasserstein/bottleneck distances between persistence diagrams. All kernels optimized with shared memory and warp-level primitives.
 
-- **Tiled distance matrix** — pairwise Euclidean distances with shared memory tiling
-- **H0 persistence** — connected component analysis via GPU union-find with path compression
-- **H1 persistence** — cycle detection in filtration order
-- **Wasserstein-1 distance** — greedy matching approximation between persistence diagrams
-- Scales to N=10,000+ points in arbitrary dimensions
+## What This Gives You
 
-## Build Requirements
+- **H⁰ persistence** — GPU union-find for connected component tracking across filtration
+- **H⁰ persistence** — Loop detection via boundary matrix operations
+- **Wasserstein distance** — p-Wasserstein and bottleneck distances between diagrams
+- **Distance matrix** — Tiled pairwise Euclidean distances
+- **Test suite** — Correctness verification against CPU reference
 
-- CUDA Toolkit 12.6+
-- RTX 4050 (sm_89) or compatible GPU
+## Quick Start
 
-## Build & Test
+```cuda
+#include "persistent_homology.cuh"
 
-```bash
-export PATH="/usr/local/cuda-12.6/bin:$PATH"
-export LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH"
-make
+// Compute distance matrix
+compute_distance_matrix_gpu(d_points, d_dist, N, D, stream);
+
+// H⁰ persistence
+compute_h0_persistence(d_dist, N, &births, &deaths, &n_pairs, stream);
+
+// H⁰ persistence  
+compute_h1_persistence(d_dist, N, &births, &deaths, &n_pairs, stream);
+
+// Wasserstein distance between two diagrams
+compute_wasserstein(d_pairs1, n1, d_pairs2, n2, p, &distance, stream);
 ```
 
-## Architecture
+## Build
 
-| File | Purpose |
-|------|---------|
-| `include/persistent_homology.cuh` | Public API header |
-| `src/distance_matrix.cu` | Tiled pairwise Euclidean distances |
-| `src/union_find.cu` | GPU union-find with atomic path compression |
-| `src/h0_persistence.cu` | H0 persistence diagram computation |
-| `src/h1_persistence.cu` | H1 persistence (cycle detection) |
-| `src/wasserstein.cu` | Wasserstein-1 distance approximation |
+```bash
+nvcc -O3 -o test_correctness tests/test_correctness.cu src/*.cu
+./test_correctness
+```
+
+## How It Fits
+
+Part of the SuperInstance ecosystem:
+
+- **[persistent-sheaf](https://github.com/SuperInstance/persistent-sheaf)** — Rust persistent sheaf cohomology
+- **gpu-persistent-homology** — CUDA persistent homology (this repo)
 
 ## License
 
 MIT
-
-Part of the [SuperInstance OpenConstruct](https://github.com/SuperInstance/OpenConstruct) ecosystem.
